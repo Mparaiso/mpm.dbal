@@ -17,7 +17,8 @@
   ],
   "devDependencies":{
     "source-map-support":"*",
-    "mocha":"*"
+    "mocha":"*",
+    "chai":"*"
   },
   "author": "mparaiso",
   "license": "LGPL",
