@@ -18,7 +18,8 @@
   "devDependencies":{
     "source-map-support":"*",
     "mocha":"*",
-    "chai":"*"
+    "chai":"*",
+    "coffee-script":"*"
   },
   "author": "mparaiso",
   "license": "LGPL",
