@@ -1,0 +1,27 @@
+{
+  "name": "mpm.dbal",
+  "version": "0.0.0",
+  "description": "database abstraction layer for nodejs",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha -R spec --recursive"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:Mparaiso/mpm.dbal.git"
+  },
+  "keywords": [
+    "dbal",
+    "query",
+    "builder"
+  ],
+  "devDependencies":{
+    "source-map-support":"*",
+    "mocha":"*"
+  },
+  "author": "mparaiso",
+  "license": "LGPL",
+  "bugs": {
+    "url": "https://github.com/Mparaiso/mpm.dbal/issues"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "Connection.js",
+  "sourceRoot": "..",
+  "sources": [
+    "src\\Connection.coffee"
+  ],
+  "names": [],
+  "mappings": ";AAAA,IAAA,MAAA;;AAAM,CAAN;CAAA;;CAAA;;CAAA;;AAEA,CAFA,EAEiB,GAAX,CAAN,GAFA"
+}

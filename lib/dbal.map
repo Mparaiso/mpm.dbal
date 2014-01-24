@@ -1,0 +1,10 @@
+{
+  "version": 3,
+  "file": "dbal.js",
+  "sourceRoot": "..",
+  "sources": [
+    "src\\dbal.coffee"
+  ],
+  "names": [],
+  "mappings": ";AAAA,CAAA,WAAA;CAAA,GAAA;;AAEA,CAFA,EAGC,CADD;CACC,CAAA,GAAA;CACC,CACC,EADD,MAAA;CACC,CAAoB,IAApB,CAAoB,YAApB,qBAAoB;MADrB;IADD;CAHD,CAAA;;AAOA,CAPA,EAOiB,CAPjB,EAOM,CAAN"
+}
