@@ -15,8 +15,10 @@
     "query",
     "builder"
   ],
+  "dependencies":{
+    "source-map-support":"*"
+  },
   "devDependencies":{
-    "source-map-support":"*",
     "mocha":"*",
     "chai":"*",
     "coffee-script":"*",

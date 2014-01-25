@@ -1,7 +1,8 @@
 "use strict"
 CompositeExpression = require './expression/CompositeExpression'
+ExpressionBuilder = require './expression/ExpressionBuilder'
 Connection = require '../Connection'
-
+_ = require 'underscore'
 ###
 QueryBuilder class is responsible to dynamically create SQL queries.
 
@@ -11,93 +12,96 @@ SQL Query Builder does not attempt to validate the generated SQL at all.
 The query builder does no validation whatsoever if certain features even work with the
 underlying database vendor. Limit queries and joins are NOT applied to UPDATE and DELETE statements
 even if some vendors such as MySQL support it.
+@class
 ###
+class QueryBuilder
 
-# class QueryBuilder
+    self = this
+    ###
+    The query types.
+    ###
+    @SELECT = 0 
+    @DELETE = 1 
+    @UPDATE = 2 
+    @INSERT = 3 
+    ###
+    The builder states.
+    ###
+    @STATE_DIRTY = 0 
+    @STATE_CLEAN = 1 
+    ###
+    @property {dbal.Connection} connection The DBAL Connection.
+    @property {Array} sqlParts The array of SQL parts collected.
+    @property {String} [sql] The complete SQL string for this query
+    @property {Array} The query parameters.
+    @property {Array} paramTypes The parameter type map of this query.
+    @property {Number} type The type of query this is. Can be select, update or delete.
+    @property {Number} state The state of the query object. Can be dirty or clean.
+    @property {Number} firstResult The index of the first result to retrieve.
+    @property {Number} maxResults The maximum number of results to retrieve.
+    @property {Number} boundCounter The counter of bound parameters used with @see bindValue).
+    ###
 
-#     self = this
-#     ###
-#     The query types.
-#     ###
-#     @SELECT = 0 
-#     @DELETE = 1 
-#     @UPDATE = 2 
-#     @INSERT = 3 
-#     ###
-#     The builder states.
-#     ###
-#     @STATE_DIRTY = 0 
-#     @STATE_CLEAN = 1 
-#     ###
-#     @property {dbal.Connection} connection The DBAL Connection.
-#     @property {Array} sqlParts The array of SQL parts collected.
-#     @property {String} [sql] The complete SQL string for this query
-#     @property {Array} The query parameters.
-#     @property {Array} paramTypes The parameter type map of this query.
-#     @property {Number} type The type of query this is. Can be select, update or delete.
-#     @property {Number} state The state of the query object. Can be dirty or clean.
-#     @property {Number} firstResult The index of the first result to retrieve.
-#     @property {Number} maxResults The maximum number of results to retrieve.
-#     @property {Number} boundCounter The counter of bound parameters used with @see bindValue).
-#     ###
+    ###
+    Initializes a new <tt>QueryBuilder</tt>.
+    @param {dbal.Connection} connection The DBAL Connection.
+     ###
+    constructor:(@connection)->
+        @boundCounter = 0 
+        @maxResults = null 
+        @firstResult=null 
+        @state= self.STATE_CLEAN 
+        @sqlParts = {
+            'select'  : {},
+            'from'    : [],
+            'join'    : {},
+            'set'     : {},
+            'where'   : [],
+            'groupBy' : null,
+            'having'  : null,
+            'orderBy' : null,
+            'values'  : {},
+        }
+        @type= self.SELECT 
+        @paramTypes={} 
+        @params={} 
+        @sql=null
 
-#     ###
-#     Initializes a new <tt>QueryBuilder</tt>.
-#     @param {dbal.Connection} connection The DBAL Connection.
-#      ###
-#     constructor:(@connection)->
-#         @boundCounter = 0 
-#         @maxResults = null 
-#         @firstResult=null 
-#         @state= self.STATE_CLEAN 
-#         @sqlParts = {
-#             'select'  : {},
-#             'from'    : {},
-#             'join'    : {},
-#             'set'     : {},
-#             'where'   : null,
-#             'groupBy' : {},
-#             'having'  : null,
-#             'orderBy' : {},
-#             'values'  : {},
-#         }
-#         @type= self.SELECT 
-#         @paramTypes={} 
-#         @params={} 
-#         @sql=""
+    ###
+    Gets an ExpressionBuilder used for object-oriented construction of query expressions.
+    This producer method is intended for convenient inline usage. Example:
+      <code>
+     qb = conn.createQueryBuilder()
+         .select('u')
+         .from('users', 'u')
+         .where(qb.expr().eq('u.id', 1)) 
+    </code>
+    For more complex expression construction, consider storing the expression
+    builder object in a local variable.
+    @return {ExpressionBuilder}
+    ###
+    expr:()->
+        return new ExpressionBuilder({}) 
+        #@TODO fix it
+        #return @connection.getExpressionBuilder() 
 
-#     ###
-#     Gets an ExpressionBuilder used for object-oriented construction of query expressions.
-#     This producer method is intended for convenient inline usage. Example:
-#       <code>
-#      qb = conn.createQueryBuilder()
-#          .select('u')
-#          .from('users', 'u')
-#          .where(qb.expr().eq('u.id', 1)) 
-#     </code>
-#     For more complex expression construction, consider storing the expression
-#     builder object in a local variable.
-#       @return \Doctrine\DBAL\Query\Expression\ExpressionBuilder
-#     ###
-#     pubexpr:()->@connection.getExpressionBuilder() 
+    ###
+     Gets the type of the currently built query.
+          @return integer
+    ###
+    gettype:()->@type 
 
-#     ###
-#      Gets the type of the currently built query.
-#           @return integer
-#     ###
-#     gettype:()->@type 
-
-#     ###
-#      Gets the associated DBAL Connection for this query builder.
-#     @return dbal.Connection
-#     ###
-#     getconnection:()->@connection 
+    ###
+     Gets the associated DBAL Connection for this query builder.
+    @return dbal.Connection
+    ###
+    getconnection:()->@connection 
     
-#     ###
-#     Gets the state of this query builder instance.
-#     @return {Number} Either QueryBuilder.STATE_DIRTY or QueryBuilder.STATE_CLEAN.
-#     ###
-#     getstate:()->@state 
+    ###
+    Gets the state of this query builder instance.
+    @return {Number} Either QueryBuilder.STATE_DIRTY or QueryBuilder.STATE_CLEAN.
+    ###
+    getstate:()->@state 
 
 #     ###
 #     Executes this query using the bound parameters and their types.
@@ -111,179 +115,174 @@ even if some vendors such as MySQL support it.
 #          else 
 #             @connection.executeUpdate(@getSQL(), @params, @paramTypes) 
 
-#     ###
-#     Gets the complete SQL string formed by the current specifications of this QueryBuilder.
-#     <code>
-#          qb = em.createQueryBuilder()
-#              .select('u')
-#              .from('User', 'u')
-#          echo qb.getSQL()  // SELECT u FROM User u
-#      </code>
-#     @return string The SQL query string.
-#     ###
-#     getsql:()->
-#         if @sql != null && @state == self.STATE_CLEAN
-#             return @sql 
-#         switch @type
-#             when self.INSERT
-#                 sql = @getSQLForInsert() 
-#             when self.DELETE
-#                 sql = @getSQLForDelete() 
-#             when self.UPDATE
-#                 sql = @getSQLForUpdate() 
-#             when self.SELECT
-#             else
-#                 sql = @getSQLForSelect() 
-#         @state = self.STATE_CLEAN 
-#         @sql = sql 
-#         return sql 
+    ###
+    Gets the complete SQL string formed by the current specifications of this QueryBuilder.
+    <code>
+         qb = em.createQueryBuilder()
+             .select('u')
+             .from('User', 'u')
+         echo qb.getSQL()  // SELECT u FROM User u
+     </code>
+    @return string The SQL query string.
+    ###
+    getSQL:()->
+        if @sql  and @state == self.STATE_CLEAN
+            return @sql 
+        switch @type
+            when self.INSERT
+                sql = @getSQLForInsert() 
+            when self.DELETE
+                sql = @getSQLForDelete() 
+            when self.UPDATE
+                sql = @getSQLForUpdate() 
+            else
+                sql = @getSQLForSelect() 
+        @state = self.STATE_CLEAN 
+        @sql = sql 
+        return sql 
 
-#     ###
-#     Sets a query parameter for the query being constructed.
-#     <code>
-#          qb = conn.createQueryBuilder()
-#              .select('u')
-#              .from('users', 'u')
-#              .where('u.id = :user_id')
-#              .setParameter(':user_id', 1) 
-#      </code>
-#     @param {String|Number} key   The parameter position or name.
-#     @param {Any}          value The parameter value.
-#     @param {String|Null}    type  One of the PDO.PARAM_* constants.
-#     @return QueryBuilder This QueryBuilder instance.
-#     ###
-#     setparameter:(key, Value, type = null)->
-    
-#         if type != null
-#             @paramTypes[key] = type 
-#         @params[key] = value 
-#         return this 
+    ###
+    Sets a query parameter for the query being constructed.
+    <code>
+         qb = conn.createQueryBuilder()
+             .select('u')
+             .from('users', 'u')
+             .where('u.id = :user_id')
+             .setParameter(':user_id', 1) 
+     </code>
+    @param {String|Number} key   The parameter position or name.
+    @param {Any}          value The parameter value.
+    @param {String|Null}    type  One of the PDO.PARAM_* constants.
+    @return QueryBuilder This QueryBuilder instance.
+    ###
+    setparameter:(key, Value, type = null)->
+        if type != null
+            @paramTypes[key] = type 
+        @params[key] = value 
+        return this 
 
-#     ###
-#     Sets a collection of query parameters for the query being constructed.
-#     <code>
-#          qb = conn.createQueryBuilder()
-#              .select('u')
-#              .from('users', 'u')
-#              .where('u.id = :user_id1 OR u.id = :user_id2')
-#              .setParameters({
-#                  ':user_id1' : 1,
-#                  ':user_id2' : 2
-#             }) 
-#     </code>
-#     @param {Object} params The query parameters to set.
-#     @param {Object} types  The query parameters types to set.
-#     @return QueryBuilder This QueryBuilder instance.
-#     ###
-#     setparameters:(params,types = {})->
-#         @paramTypes = types 
-#         @params = params 
-#         return this 
+    ###
+    Sets a collection of query parameters for the query being constructed.
+    <code>
+         qb = conn.createQueryBuilder()
+             .select('u')
+             .from('users', 'u')
+             .where('u.id = :user_id1 OR u.id = :user_id2')
+             .setParameters({
+                 ':user_id1' : 1,
+                 ':user_id2' : 2
+            }) 
+    </code>
+    @param {Object} params The query parameters to set.
+    @param {Object} types  The query parameters types to set.
+    @return QueryBuilder This QueryBuilder instance.
+    ###
+    setparameters:(params,types = {})->
+        @paramTypes = types 
+        @params = params 
+        return this 
 
-#     ###
-#     Gets all defined query parameters for the query being constructed.
-#     @return {Object} The currently defined query parameters.
-#      ###
-#     getparameters:()->return @params 
+    ###
+    Gets all defined query parameters for the query being constructed.
+    @return {Object} The currently defined query parameters.
+     ###
+    getparameters:()->return @params 
     
 
-#     ###
-#     Gets a (previously set) query parameter of the query being constructed.
-#     @param mixed key The key (index or name) of the bound parameter.
-#     @return mixed The value of the bound parameter.
-#      ###
-#     getparameter:(key)-> @params[key]
+    ###
+    Gets a (previously set) query parameter of the query being constructed.
+    @param mixed key The key (index or name) of the bound parameter.
+    @return mixed The value of the bound parameter.
+     ###
+    getparameter:(key)-> @params[key]
     
 
-#     ###
-#     Sets the position of the first result to retrieve (the "offset").
-#     @param {Number} firstResult The first result to return.
-#     @return QueryBuilder This QueryBuilder instance.
-#     ###
-#     setfirstresult:(firstResult)->
-#         @state = self.STATE_DIRTY 
-#         @firstResult = firstResult 
-#         return this 
+    ###
+    Sets the position of the first result to retrieve (the "offset").
+    @param {Number} firstResult The first result to return.
+    @return QueryBuilder This QueryBuilder instance.
+    ###
+    setfirstresult:(firstResult)->
+        @state = self.STATE_DIRTY 
+        @firstResult = firstResult 
+        return this 
     
 
-#     ###
-#     Gets the position of the first result the query object was set to retrieve (the "offset").
-#     Returns NULL if @link setFirstResult was not applied to this QueryBuilder.
-#     @return integer The position of the first result.
-#     ###
-#     getfirstresult:()->@firstResult 
+    ###
+    Gets the position of the first result the query object was set to retrieve (the "offset").
+    Returns NULL if @link setFirstResult was not applied to this QueryBuilder.
+    @return integer The position of the first result.
+    ###
+    getfirstresult:()->@firstResult 
 
-#     ###
-#     Sets the maximum number of results to retrieve (the "limit").
-#     @param integer maxResults The maximum number of results to retrieve.
-#     @return \Doctrine\DBAL\Query\QueryBuilder This QueryBuilder instance.
-#     ###
-#     setmaxResults:(maxResuLts)->
-#         @state = self.STATE_DIRTY 
-#         @maxResults = maxResults 
-#         return this 
+    ###
+    Sets the maximum number of results to retrieve (the "limit").
+    @param integer maxResults The maximum number of results to retrieve.
+    @return \Doctrine\DBAL\Query\QueryBuilder This QueryBuilder instance.
+    ###
+    setmaxResults:(maxResuLts)->
+        @state = self.STATE_DIRTY 
+        @maxResults = maxResults 
+        return this 
 
-#     ###
-#     Gets the maximum number of results the query object was set to retrieve (the "limit").
-#     Returns NULL if @link setMaxResults was not applied to this query builder.
-#     @return integer The maximum number of results.
-#     ###
-#     getmaxResults:()->@maxResults 
+    ###
+    Gets the maximum number of results the query object was set to retrieve (the "limit").
+    Returns NULL if @link setMaxResults was not applied to this query builder.
+    @return integer The maximum number of results.
+    ###
+    getmaxResults:()->@maxResults 
 
-#     ###
-#     Either appends to or replaces a single, generic query part.
-#     The available parts are: 'select', 'from', 'set', 'where',
-#     'groupBy', 'having' and 'orderBy'.
-#     @param string  sqlPartName
-#     @param string  sqlPart
-#     @param boolean append
-#     @return \Doctrine\DBAL\Query\QueryBuilder This QueryBuilder instance.
-#     ###
-#     add:(sqlPartName, sqlPart, append = False)->
-    
-#         isArray = sqlPart instanceof Array
-#         isMultiple = typeof @sqlParts[sqlPartName] == 'object'
+    ###
+    Either appends to or replaces a single, generic query part.
+    The available parts are: 'select', 'from', 'set', 'where',
+    'groupBy', 'having' and 'orderBy'.
+    @param string  sqlPartName
+    @param string  sqlPart
+    @param boolean append
+    @return \Doctrine\DBAL\Query\QueryBuilder This QueryBuilder instance.
+    ###
+    add:(sqlPartName, sqlPart, append = false)->
+        isArray =  sqlPart instanceof Array 
+        isMultiple = @sqlParts[sqlPartName] instanceof Array
+        debugger
+        #if isMultiple and not isArray
+        #    sqlPart = [sqlPart]
 
-#         if (isMultiple && !isArray) 
-#             sqlPart = [sqlPart]
+        @state = self.STATE_DIRTY 
 
-#         @state = self.STATE_DIRTY 
-
-#         if append
-#             if sqlPartName == "orderBy" || sqlPartName == "groupBy" || sqlPartName == "select" || sqlPartName == "set" 
-#                 for part in sqlPart
-#                     @sqlParts[sqlPartName].push(part)
+        if append
+            if sqlPartName == "orderBy" || sqlPartName == "groupBy" || sqlPartName == "select" || sqlPartName == "set" 
+                for part in sqlPart
+                    @sqlParts[sqlPartName].push(part)
                 
-#             #else if  isArray && is_array(sqlPart[key(sqlPart)])) 
-#             #    key = key(sqlPart) 
-#             #    @sqlParts[sqlPartName][key].push(sqlPart[key])
-#             else if isMultiple
-#                 @sqlParts[sqlPartName].push(sqlPart)
-#             else 
-#                 @sqlParts[sqlPartName].push(sqlPart)
-#             return this 
-#         else
-#             @sqlParts[sqlPartName] = sqlPart 
-#             return this 
+            else if  isArray && _.isArray(key = Object.keys(sqlPart)[0])
+                @sqlParts[sqlPartName][key].push(sqlPart[key])
+            else if isMultiple
+                @sqlParts[sqlPartName].push(sqlPart)
+            else 
+                @sqlParts[sqlPartName].push(sqlPart)
+        else
+            @sqlParts[sqlPartName] = sqlPart 
+        return this
 
-#     ###
-#     Specifies an item that is to be returned in the query result.
-#     Replaces any previously specified selections, if any.
-#     <code>
-#     qb = conn.createQueryBuilder()
-#         .select('u.id', 'p.id')
-#         .from('users', 'u')
-#         .leftJoin('u', 'phonenumbers', 'p', 'u.id = p.user_id') 
-#     </code>
-#     @param mixed select The selection expressions.
-#     @return {QueryBuilder} This QueryBuilder instance.
-#     ###
-#     select:(select)->
-#         @type = self.SELECT 
-#         if !select
-#             return this 
-#         selects = if select instanceof Array then select else [].slice.apply(arguments)
-#         return @add('select', selects, false) 
+    ###
+    Specifies an item that is to be returned in the query result.
+    Replaces any previously specified selections, if any.
+    <code>
+    qb = conn.createQueryBuilder()
+        .select('u.id', 'p.id')
+        .from('users', 'u')
+        .leftJoin('u', 'phonenumbers', 'p', 'u.id = p.user_id') 
+    </code>
+    @param mixed select The selection expressions.
+    @return {QueryBuilder} This QueryBuilder instance.
+    ###
+    select:(select)->
+        @type = self.SELECT 
+        if !select
+            return this 
+        selects = if select instanceof Array then select else [].slice.apply(arguments)
+        return @add('select', selects, false) 
 
 #     ###
 #     Adds an item that is to be returned in the query result.
@@ -345,42 +344,42 @@ even if some vendors such as MySQL support it.
 #             return this 
 #         return @add('from', {'table' : update,'alias' : alias})
 
-#     ###
-#      Turns the query being built into an insert query that inserts into
-#      a certain table
-#           <code>
-#          qb = conn.createQueryBuilder()
-#              .insert('users')
-#              .values(
-#                  array(
-#                      'name' : '?',
-#                      'password' : '?'
-#                  )
-#              ) 
-#      </code>
-#      @param {string} insert The table into which the rows should be inserted.
-#     @return {QueryBuilder} This QueryBuilder instance.
-#     ###
-#     insert:(insert = null)->
-#         @type = self.INSERT 
-#         if not insert
-#             return this 
-#         return @add('from', 'table' : insert)
+    ###
+    Turns the query being built into an insert query that inserts into
+    a certain table
+        <code>
+         qb = conn.createQueryBuilder()
+             .insert('users')
+             .values(
+                 array(
+                     'name' : '?',
+                     'password' : '?'
+                 )
+             ) 
+        </code>
+    @param {string} insert The table into which the rows should be inserted.
+    @return {QueryBuilder} This QueryBuilder instance.
+    ###
+    insert:(insert = null)->
+        @type = self.INSERT 
+        if not insert
+            return this 
+        return @add('from',{'table' : insert})
 
-#     ###
-#      Creates and adds a query root corresponding to the table identified by the
-#      given alias, forming a cartesian product with any existing query roots.
-#           <code>
-#          qb = conn.createQueryBuilder()
-#              .select('u.id')
-#              .from('users', 'u')
-#      </code>
-#     @param {string} from   The table.
-#     @param {string} alias  The alias of the table.
-#     @return {QueryBuilder} This QueryBuilder instance.
-#     ###
-#     from:(from, alias)->
-#         return @add('from', {'table' : from,'alias' : alias},true)
+    ###
+     Creates and adds a query root corresponding to the table identified by the
+     given alias, forming a cartesian product with any existing query roots.
+          <code>
+         qb = conn.createQueryBuilder()
+             .select('u.id')
+             .from('users', 'u')
+     </code>
+    @param {string} from   The table.
+    @param {string} alias  The alias of the table.
+    @return {QueryBuilder} This QueryBuilder instance.
+    ###
+    from:(from, alias)->
+        return @add('from', {'table' : from,'alias' : alias},true)
 
 #     ###
 #      Creates and adds a join to the query.
@@ -490,88 +489,84 @@ even if some vendors such as MySQL support it.
 #         return @add('set', "#{key} = #{value}", true) 
     
 
-#     ###
-#     Specifies one or more restrictions to the query result.
-#     Replaces any previously specified restrictions, if any.
-#           <code>
-#          qb = conn.createQueryBuilder()
-#              .select('u.name')
-#              .from('users', 'u')
-#              .where('u.id = ?') 
-#               // You can optionally programatically build and/or expressions
-#          qb = conn.createQueryBuilder() 
-#               or = qb.expr().orx() 
-#          or.add(qb.expr().eq('u.id', 1)) 
-#          or.add(qb.expr().eq('u.id', 2)) 
-#               qb.update('users', 'u')
-#              .set('u.password', md5('password'))
-#              .where(or) 
-#      </code>
-#     @param mixed predicates The restriction predicates.
-#     @return \Doctrine\DBAL\Query\QueryBuilder This QueryBuilder instance.
-#     ###
-#     where:(predicates)->
-#         if not arguments.length == 1 and predicates instanceof CompositeExpression
-#             predicates = new CompositeExpression(CompositeExpression.TYPE_AND,arguments) 
-#         return @add('where', predicates)
+    ###
+        Specifies one or more restrictions to the query result.
+        Replaces any previously specified restrictions, if any.
+        <code>
+             qb = conn.createQueryBuilder()
+                 .select('u.name')
+                 .from('users', 'u')
+                 .where('u.id = ?') 
+            // You can optionally programatically build and/or expressions
+             qb = conn.createQueryBuilder() 
+                  or = qb.expr().orx() 
+             or.add(qb.expr().eq('u.id', 1)) 
+             or.add(qb.expr().eq('u.id', 2)) 
+                  qb.update('users', 'u')
+                 .set('u.password', md5('password'))
+                 .where(or) 
+        </code>
+        @param {Any} predicates The restriction predicates.
+        @return {QueryBuilder} This QueryBuilder instance.
+    ###
+    where:(predicates)->
+        if arguments.length != 1 and predicates instanceof CompositeExpression
+            predicates = new CompositeExpression(CompositeExpression.TYPE_AND,arguments) 
+        @add('where', [predicates])
     
 
-#     ###
-#      Adds one or more restrictions to the query results, forming a logical
-#      conjunction with any previously specified restrictions.
-#           <code>
-#          qb = conn.createQueryBuilder()
-#              .select('u')
-#              .from('users', 'u')
-#              .where('u.username LIKE ?')
-#              .andWhere('u.is_active = 1') 
-#      </code>
-#           @param mixed where The query restrictions.
-#           @return \Doctrine\DBAL\Query\QueryBuilder This QueryBuilder instance.
-#           @see where()
-#      ###
-#     andwhere:(where)->
-    
-#         args = func_get_args() 
-#         where = @getQueryPart('where') 
-
-#         if (where instanceof CompositeExpression && where.getType() == CompositeExpression.TYPE_AND) 
-#             where.addMultiple(args) 
-#          else 
-#             array_unshift(args, where) 
-#             where = new CompositeExpression(CompositeExpression.TYPE_AND, args) 
+    ###
+        Adds one or more restrictions to the query results, forming a logical
+        conjunction with any previously specified restrictions.
+              <code>
+             qb = conn.createQueryBuilder()
+                 .select('u')
+                 .from('users', 'u')
+                 .where('u.username LIKE ?')
+                 .andWhere('u.is_active = 1') 
+         </code>
+        @param {Any} where The query restrictions.
+        @return {QueryBuilder} This QueryBuilder instance.
+        @see where()
+    ###
+    andWhere:(where)->
+        args = [].slice.call(arguments);
+        where = this.getQueryPart('where') 
+        if where instanceof CompositeExpression && where.getType() == CompositeExpression.TYPE_AND
+            where.addMultiple(args) 
+        else 
+            args.unshift(where)
+            where = new CompositeExpression(CompositeExpression.TYPE_AND,args)
         
 
-#         return @add('where', where, true) 
+        return this.add('where', [where]) 
     
 
-#     ###
-#      Adds one or more restrictions to the query results, forming a logical
-#      disjunction with any previously specified restrictions.
-#           <code>
-#          qb = em.createQueryBuilder()
-#              .select('u.name')
-#              .from('users', 'u')
-#              .where('u.id = 1')
-#              .orWhere('u.id = 2') 
-#      </code>
-#           @param mixed where The WHERE statement.
-#           @return \Doctrine\DBAL\Query\QueryBuilder This QueryBuilder instance.
-#           @see where()
-#      ###
-#     orwhere:(where)->
-    
-#         args = func_get_args() 
-#         where = @getQueryPart('where') 
+    ###
+        Adds one or more restrictions to the query results, forming a logical
+        disjunction with any previously specified restrictions.
+        <code>
+         qb = em.createQueryBuilder()
+             .select('u.name')
+             .from('users', 'u')
+             .where('u.id = 1')
+             .orWhere('u.id = 2') 
+        </code>
+        @param {Any} where The WHERE statement.
+        @return {QueryBuilder} This QueryBuilder instance.
+        @see where()
+    ###
+    orWhere:(where)->
+        args = [].slice.call(arguments);
+        where = this.getQueryPart('where') 
 
-#         if (where instanceof CompositeExpression && where.getType() == CompositeExpression.TYPE_OR) 
-#             where.addMultiple(args) 
-#          else 
-#             array_unshift(args, where) 
-#             where = new CompositeExpression(CompositeExpression.TYPE_OR, args) 
-        
+        if where instanceof CompositeExpression && where.getType() == CompositeExpression.TYPE_OR
+            where.addMultiple(args) 
+        else 
+            args.unshift(where)
+            where = new CompositeExpression(CompositeExpression.TYPE_OR, args) 
 
-#         return @add('where', where, true) 
+        return this.add('where', [where]) 
     
 
 #     ###
@@ -621,48 +616,45 @@ even if some vendors such as MySQL support it.
 #         return @add('groupBy', groupBy, true) 
     
 
-#     ###
-#      Sets a value for a column in an insert query.
-#           <code>
-#          qb = conn.createQueryBuilder()
-#              .insert('users')
-#              .values(
-#                  array(
-#                      'name' : '?'
-#                  )
-#              )
-#              .setValue('password', '?') 
-#      </code>
-#           @param string column The column into which the value should be inserted.
-#      @param string value  The value that should be inserted into the column.
-#           @return QueryBuilder This QueryBuilder instance.
-#      ###
-#     setvalue:(column, vAlue)->
-    
-#         @sqlParts['values'][column] = value 
-
-#         return this 
+    ###
+    Sets a value for a column in an insert query.
+    <code>
+         qb = conn.createQueryBuilder()
+             .insert('users')
+             .values(
+                 array(
+                     'name' : '?'
+                 )
+             )
+             .setValue('password', '?') 
+    </code>
+    @param string column The column into which the value should be inserted.
+    @param string value  The value that should be inserted into the column.
+    @return QueryBuilder This QueryBuilder instance.
+    ###
+    setvalue:(column, value)->
+        this.sqlParts['values'][column] = value 
+        return this
     
 
-#     ###
-#      Specifies values for an insert query indexed by column names.
-#      Replaces any previous values, if any.
-#           <code>
-#          qb = conn.createQueryBuilder()
-#              .insert('users')
-#              .values(
-#                  array(
-#                      'name' : '?',
-#                      'password' : '?'
-#                  )
-#              ) 
-#      </code>
-#           @param array values The values to specify for the insert query indexed by column names.
-#           @return QueryBuilder This QueryBuilder instance.
-#      ###
-#     values:(values)->
-    
-#         return @add('values', values) 
+    ###
+    Specifies values for an insert query indexed by column names.
+    Replaces any previous values, if any.
+          <code>
+         qb = conn.createQueryBuilder()
+             .insert('users')
+             .values(
+                 array(
+                     'name' : '?',
+                     'password' : '?'
+                 )
+             ) 
+     </code>
+    @param array values The values to specify for the insert query indexed by column names.
+    @return QueryBuilder This QueryBuilder instance.
+    ###
+    values:(values)->
+        return this.add('values', values) 
     
 
 #     ###
@@ -744,14 +736,13 @@ even if some vendors such as MySQL support it.
 #         return @add('orderBy', sort+' '+(! order ? 'ASC' : order), true) 
     
 
-#     ###
-#      Gets a query part by its name.
-#           @param string queryPartName
-#           @return mixed
-#      ###
-#     getquerypart:(queryPartnAme)->
-    
-#         return @sqlParts[queryPartName] 
+    ###
+        Gets a query part by its name.
+        @param {String} queryPartName
+        @return mixed
+     ###
+    getQueryPart:(queryPartName)->
+        return this.sqlParts[queryPartName] 
     
 
 #     ###
@@ -791,52 +782,46 @@ even if some vendors such as MySQL support it.
 #         return this 
     
 
-#     ###
-#     @return {String}
-#     @throws \Doctrine\DBAL\Query\QueryException
-#     ###
-#     getSQLForSelect:()->
+    ###
+        @return {String}
+        @throws {QueryException}
+    ###
+    getSQLForSelect:()->
     
-#         query = 'SELECT '+implode(', ', @sqlParts['select'])+' FROM ' 
+        query = "SELECT #{this.sqlParts.select.join(', ')} FROM "
 
-#         fromClauses = {} 
-#         knownAliases = {} 
+        fromClauses = {} 
+        knownAliases = {} 
 
-#         // Loop through all FROM clauses
-#         foreach (@sqlParts['from'] as from) 
-#             knownAliases[from['alias']] = true 
-#             fromClause = from['table']+' '+from['alias']
-#                +@getSQLForJoins(from['alias'], knownAliases) 
-
-#             fromClauses[from['alias']] = fromClause 
+        ### Loop through all FROM clauses ###
+        for from in this.sqlParts.from
+            knownAliases[from['alias']] = true 
+            fromClause = "#{from['table']} #{from['alias']}#{this.getSQLForJoins(from['alias'], knownAliases)}"
+            fromClauses[from['alias']] = fromClause 
         
+        for fromAlias,joins of this.sqlParts.join
+            if not knownAliases[fromAlias]
+                throw "unknowAlias #{fromAlias} #{_.keys(knownAliases)}"
 
-#         foreach (@sqlParts['join'] as fromAlias : joins) 
-#             if ( ! isset(knownAliases[fromAlias])) 
-#                 throw QueryException.unknownAlias(fromAlias, array_keys(knownAliases)) 
-            
-        
+        return query.concat(Object.keys(fromClauses).map((k)->fromClauses[k]).join(', '))
+            .concat(if this.sqlParts['where'].length > 0   then ' WHERE '+ this.sqlParts['where'].join(' ') else '')
+            .concat(if this.sqlParts['groupBy'] then ' GROUP BY '+ this.sqlParts['groupBy'].join(', ') else '')
+            .concat(if this.sqlParts['having']  then ' HAVING '+ this.sqlParts['having'] else '' )
+            .concat(if this.sqlParts['orderBy'] then ' ORDER BY '+ this.sqlParts['orderBy'].join(', ') else '')
 
-#         query .= implode(', ', fromClauses)
-#            +(@sqlParts['where'] != null ? ' WHERE '+((string) @sqlParts['where']) : '')
-#            +(@sqlParts['groupBy'] ? ' GROUP BY '+implode(', ', @sqlParts['groupBy']) : '')
-#            +(@sqlParts['having'] != null ? ' HAVING '+((string) @sqlParts['having']) : '')
-#            +(@sqlParts['orderBy'] ? ' ORDER BY '+implode(', ', @sqlParts['orderBy']) : '') 
-
-#         return (@maxResults == null && @firstResult == null)
-#             ? query
-#             : @connection.getDatabasePlatform().modifyLimitQuery(query, @maxResults, @firstResult) 
+        # TODO fix it,since it involves connection
+        #return (@maxResults == null && @firstResult == null)
+        #    ? query
+        #    : @connection.getDatabasePlatform().modifyLimitQuery(query, @maxResults, @firstResult) 
     
 
-#     ###
-#      Converts this instance into an INSERT string in SQL.
-#           @return string
-#      ###
-#     getSQLForInsert:()->
-    
-#         return 'INSERT INTO '+@sqlParts['from']['table'] .
-#         ' ('+implode(', ', array_keys(@sqlParts['values']))+')' .
-#         ' VALUES('+implode(', ', @sqlParts['values'])+')' 
+    ###
+    Converts this instance into an INSERT string in SQL.
+    @return string
+    ###
+    getSQLForInsert:()->
+        return "INSERT INTO #{this.sqlParts.from.table} (#{_.keys(this.sqlParts.values).join(', ')} VALUES(#{_.values(this.sqlParts.values).join(', ')})"
+
     
 
 #     ###
@@ -923,23 +908,32 @@ even if some vendors such as MySQL support it.
 #         @setParameter(@boundCounter, value, type) 
 #         return "?" 
 
-#     ###
-#     @param {string} fromAlias
-#     @param {array}  knownAliases
-#     @return {string}
-#     ###
-#     getSQLForJoins:(fromAlias,knownAliases)->
-#         sql = '' 
-#         if @sqlParts.join?.fromAlias
-#             for join of @sqlParts.join.fromAlias
-#                 sql += " #{join.joinType.toUpperCase()} JOIN #{join['joinTable']} {join['joinAlias']} ON #{join['joinCondition']} "
-#                 knownAliases[join.joinAlias] = true 
-#                 sql += @getSQLForJoins(join.joinAlias, knownAliases) 
-#         return sql 
+    ###
+    @param {string} fromAlias
+    @param {array}  knownAliases
+    @return {string}
+    ###
+    getSQLForJoins:(fromAlias,knownAliases)->
+        sql = '' 
+        if @sqlParts.join?.fromAlias
+            for join of @sqlParts.join.fromAlias
+                sql += " #{join.joinType.toUpperCase()} JOIN #{join['joinTable']} {join['joinAlias']} ON #{join['joinCondition']} "
+                knownAliases[join.joinAlias] = true 
+                sql += @getSQLForJoins(join.joinAlias, knownAliases) 
+        return sql 
     
-#     ###
-#     Deep clone of all expression objects in the SQL parts.
-#     @return void
-#     ###
-#     clone:->
-#        throw "not implemented yet"
+    ###
+        Deep clone of all expression objects in the SQL parts.
+        @return void
+    ###
+    clone:->
+       throw "not implemented yet"
+
+    toString:->@getSQL()
+    ###
+        @return {String}
+    ###
+    valueOf:->@toString()
+
+
+module.exports = QueryBuilder

@@ -1,5 +1,7 @@
 test: build
 	@mocha -R spec --recursive   
+test-debug: build
+	@mocha -R spec --recursive --debug-brk
 commit: build
 	@git add .
 	@git commit -am "update `date`" | :

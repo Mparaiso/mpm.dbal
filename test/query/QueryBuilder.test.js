@@ -1,68 +1,62 @@
 /*global describe,it,before,after,beforeEach,afterEach*/
 "use strict";
-var assert,expect,dbal,QueryBuilder,ExpressionBuilder;
-expect=require('chai').expect;
-assert=require('assert');
-dbal=require('../../index');
-QueryBuilder=dbal.query.QueryBuilder;
+var assert, expect, dbal, QueryBuilder, ExpressionBuilder;
+expect = require('chai').expect;
+assert = require('assert');
+dbal = require('../../index');
+QueryBuilder = dbal.query.QueryBuilder;
 /**
  * dbal.query.QueryBuilder test
  */
-describe('dbal.query.QueryBuilder',function(){
-	beforeEach(function(){
-		this.queryBuilder   = new QueryBuilder();
+describe('dbal.query.QueryBuilder', function() {
+	beforeEach(function() {
+		this.qb = new QueryBuilder();
 	});
-	return;
+	describe('#select', function() {
+		it('simple', function() {
+			this.qb.select('u.id').from('users', 'u');
+			assert.equal(this.qb, "SELECT u.id FROM users u");
+		});
+		it('#where', function() {
+			var expr = this.qb.expr();
+			this.qb.select('u.id')
+				.from('users', 'u')
+				.where(expr.andX(expr.eq('u.nickname', '?')));
+			assert.equal(this.qb, "SELECT u.id FROM users u WHERE u.nickname = ?");
+		});
+		it('#where #andWhere', function() {
+			this.qb.select('u.*', 'p.*')
+				.from('users', 'u')
+				.where('u.username = ?')
+				.andWhere('u.name = ?');
+			assert.equal(this.qb, 'SELECT u.*, p.* FROM users u WHERE (u.username = ?) AND (u.name = ?)');
+		});
+		it('#where #orWhere', function() {
+			this.qb.select('u.*', 'p.*')
+				.from('users', 'u')
+				.where('u.username = ?')
+				.orWhere('u.name = ?');
+			assert.equal(this.qb, 'SELECT u.*, p.* FROM users u WHERE (u.username = ?) OR (u.name = ?)');
+		});
+		it('#orWhere #orWhere', function() {
+			this.qb.select('u.*', 'p.*')
+				.from('users', 'u')
+				.orWhere('u.username = ?')
+				.orWhere('u.name = ?');
+			assert.equal(this.qb, 'SELECT u.*, p.* FROM users u WHERE (u.username = ?) OR (u.name = ?)');
+		});
+		it('#where #andWhere #orWhere #andWhere', function() {
+			this.qb.select('u.*', 'p.*')
+				.from('users', 'u')
+				.where('u.username = ?')
+				.andWhere('u.username = ?')
+				.orWhere('u.name = ?')
+				.andWhere('u.name = ?');
+			assert.equal(this.qb.getSQL(),
+				'SELECT u.*, p.* FROM users u WHERE (((u.username = ?) AND (u.username = ?)) OR (u.name = ?)) AND (u.name = ?)');
+		});
+	});
 });
-
-// <?php
-
-// namespace Doctrine\Tests\DBAL\Query;
-
-// use Doctrine\DBAL\Query\Expression\ExpressionBuilder,
-//     Doctrine\DBAL\Query\QueryBuilder;
-
-// require_once __DIR__ . '/../../TestInit.php';
-
-/**
- * @group DBAL-12
- */
-// class QueryBuilderTest extends \Doctrine\Tests\DbalTestCase
-// {
-//     protected $conn;
-
-//     public function setUp()
-//     {
-//         $this->conn = $this->getMock('Doctrine\DBAL\Connection', array(), array(), '', false);
-
-//         $expressionBuilder = new ExpressionBuilder($this->conn);
-
-//         $this->conn->expects($this->any())
-//                    ->method('getExpressionBuilder')
-//                    ->will($this->returnValue($expressionBuilder));
-//     }
-
-//     public function testSimpleSelect()
-//     {
-//         $qb = new QueryBuilder($this->conn);
-
-//         $qb->select('u.id')
-//            ->from('users', 'u');
-
-//         $this->assertEquals('SELECT u.id FROM users u', (string) $qb);
-//     }
-
-//     public function testSelectWithSimpleWhere()
-//     {
-//         $qb   = new QueryBuilder($this->conn);
-//         $expr = $qb->expr();
-
-//         $qb->select('u.id')
-//            ->from('users', 'u')
-//            ->where($expr->andX($expr->eq('u.nickname', '?')));
-
-//         $this->assertEquals("SELECT u.id FROM users u WHERE u.nickname = ?", (string) $qb);
-//     }
 
 //     public function testSelectWithLeftJoin()
 //     {
@@ -112,44 +106,9 @@ describe('dbal.query.QueryBuilder',function(){
 //         $this->assertEquals('SELECT u.*, p.* FROM users u RIGHT JOIN phones p ON p.user_id = u.id', (string) $qb);
 //     }
 
-//     public function testSelectWithAndWhereConditions()
-//     {
-//         $qb   = new QueryBuilder($this->conn);
-//         $expr = $qb->expr();
+//   
 
-//         $qb->select('u.*', 'p.*')
-//            ->from('users', 'u')
-//            ->where('u.username = ?')
-//            ->andWhere('u.name = ?');
 
-//         $this->assertEquals('SELECT u.*, p.* FROM users u WHERE (u.username = ?) AND (u.name = ?)', (string) $qb);
-//     }
-
-//     public function testSelectWithOrWhereConditions()
-//     {
-//         $qb   = new QueryBuilder($this->conn);
-//         $expr = $qb->expr();
-
-//         $qb->select('u.*', 'p.*')
-//            ->from('users', 'u')
-//            ->where('u.username = ?')
-//            ->orWhere('u.name = ?');
-
-//         $this->assertEquals('SELECT u.*, p.* FROM users u WHERE (u.username = ?) OR (u.name = ?)', (string) $qb);
-//     }
-
-//     public function testSelectWithOrOrWhereConditions()
-//     {
-//         $qb   = new QueryBuilder($this->conn);
-//         $expr = $qb->expr();
-
-//         $qb->select('u.*', 'p.*')
-//            ->from('users', 'u')
-//            ->orWhere('u.username = ?')
-//            ->orWhere('u.name = ?');
-
-//         $this->assertEquals('SELECT u.*, p.* FROM users u WHERE (u.username = ?) OR (u.name = ?)', (string) $qb);
-//     }
 
 //     public function testSelectWithAndOrWhereConditions()
 //     {
