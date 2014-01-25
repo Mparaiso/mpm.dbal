@@ -1,13 +1,13 @@
-mpm.dbal
+{{name}}
 ========
 
-git@github.com:Mparaiso/mpm.dbal.git
+{% if(repository){print(repository.url)} %}
 
-database abstraction layer for nodejs
+{{description}}
 
-version: 0.0.1
-author : mparaiso
-license: LGPL
+version: {{version}}
+author : {{author}}
+license: {{license}}
 
 inspired by https://github.com/doctrine/dbal
 
@@ -15,13 +15,11 @@ inspired by https://github.com/doctrine/dbal
 
 ###INSTALLATION
 
-	npm install mpm.dbal
+	npm install {{name}}
 
 ###DEPENDENCIES
 
-- source-map-support
-- underscore
-
+{%_.forEach(dependencies,function(dep,key){print("- ".concat(key).concat("\r\n"))}) %}
 
 ###TODO 
 - write doc

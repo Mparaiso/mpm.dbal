@@ -1,6 +1,6 @@
 {
   "name": "mpm.dbal",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "database abstraction layer for nodejs",
   "main": "index.js",
   "scripts": {
@@ -13,10 +13,12 @@
   "keywords": [
     "dbal",
     "query",
-    "builder"
+    "builder",
+    "database"
   ],
   "dependencies":{
-    "source-map-support":"*"
+    "source-map-support":"*",
+    "underscore":"*"
   },
   "devDependencies":{
     "mocha":"*",
