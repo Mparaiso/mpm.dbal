@@ -19,7 +19,8 @@
     "source-map-support":"*",
     "mocha":"*",
     "chai":"*",
-    "coffee-script":"*"
+    "coffee-script":"*",
+    "codo":"*"
   },
   "author": "mparaiso",
   "license": "LGPL",

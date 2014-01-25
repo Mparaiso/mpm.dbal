@@ -1,6 +1,6 @@
 "use strict"
 
-Connection = require '../../dbal/Connection'
+Connection = require '../../Connection'
 CompositeExpression= require './CompositeExpression'
 
 ###
@@ -22,13 +22,12 @@ class ExpressionBuilder
      * @property {Connection}
     ###
 
-
     ###
      * Initializes a new <tt>ExpressionBuilder</tt>.
      *
      * @param {Connection} connection The DBAL Connection.
     ###
-    construct:(connEction)->
+    constructor:(connection)->
     
         this.connection = connection
     
@@ -47,7 +46,7 @@ class ExpressionBuilder
      *
      * @return \Doctrine\DBAL\Query\Expression\CompositeExpression
     ###
-    andx:(x = null)->
+    andX:(x = null)->
     
         return new CompositeExpression(CompositeExpression.TYPE_AND, arguments)
     
@@ -66,7 +65,7 @@ class ExpressionBuilder
      *
      * @return \Doctrine\DBAL\Query\Expression\CompositeExpression
     ###
-    orx:(x = null)->
+    orX:(x = null)->
     
         return new CompositeExpression(CompositeExpression.TYPE_OR, arguments)
     
@@ -206,8 +205,8 @@ class ExpressionBuilder
      *
      * @return string
     ###
-    isnull:(x)->
-        return x +' IS NULL'
+    isNull:(x)->
+        return x + ' IS NULL'
     
 
     ###
@@ -217,7 +216,7 @@ class ExpressionBuilder
      *
      * @return string
     ###
-    isnotnull:(x)->
+    isNotNull:(x)->
         return x + ' IS NOT NULL'
     
 
@@ -242,7 +241,7 @@ class ExpressionBuilder
      *
      * @return string
     ###
-    notlike:(x, y)->
+    notLike:(x, y)->
     
         return this.comparison(x, 'NOT LIKE', y)
     
@@ -268,10 +267,11 @@ class ExpressionBuilder
      *
      * @return string
     ###
-    notin:(x,y)->
+    notIn:(x,y)->
     
         return this.comparison(x, 'NOT IN', '('+y.join(', ')+')')
-    
+
+    notin: @::notIn
 
     ###
      * Quotes a given input parameter.
@@ -282,7 +282,11 @@ class ExpressionBuilder
      * @return string
     ###
     literal:(input, type = null)->
+        ###@TODO edit quoting###
+        #return this.connection.quote(input, type)
+        if typeof input == 'string'
+            "'#{input}'"
+        else
+            input
     
-        return this.connection.quote(input, type)
-    
-
+module.exports = ExpressionBuilder

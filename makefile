@@ -5,6 +5,10 @@ commit: build
 	@git commit -am "update `date`" | :
 push: commit
 	@git push origin --all
+doc: src
+	@codo -o doc src
 build: src
 	@coffee -c -b -m -o lib src
+
+.PHONY: doc
 
