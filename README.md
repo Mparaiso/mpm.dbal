@@ -1,12 +1,12 @@
 mpm.dbal
 ========
 
-git@github.com:Mparaiso/mpm.dbal.git
-
 database abstraction layer for nodejs
 
 version: 0.0.1
+
 author : mparaiso
+
 license: LGPL
 
 inspired by https://github.com/doctrine/dbal

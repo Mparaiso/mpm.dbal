@@ -1,12 +1,12 @@
 {{name}}
 ========
 
-{% if(repository){print(repository.url)} %}
-
 {{description}}
 
 version: {{version}}
+
 author : {{author}}
+
 license: {{license}}
 
 inspired by https://github.com/doctrine/dbal
