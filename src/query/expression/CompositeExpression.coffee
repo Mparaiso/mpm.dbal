@@ -4,7 +4,7 @@
 Composite expression is responsible to build a group of similar expression.
 
 ###
-class CompositeExpression 
+class CompositeExpression
 
     self= this
     get =(o)=> Object.defineProperty(@::,k,{get:v}) for k,v of o
@@ -72,6 +72,10 @@ class CompositeExpression
             return this.parts[0]
         else
             return '(' + this.parts.join(") #{this.type} (") + ')'
+
+    
+    valueOf:()->
+        @toString()
 
     ###
     Returns the type of this composite expression (AND/OR).

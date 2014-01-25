@@ -6,18 +6,17 @@ assert = require('assert');
 dbal = require('../../../index');
 ExpressionBuilder = dbal.query.expression.ExpressionBuilder;
 CompositeExpression = dbal.query.expression.CompositeExpression;
+
 /**
- * dbal.query.expression.ExpressionBuilder
+ * dbal.query.expression.ExpressionBuilder test
  */
 describe('dbal.query.expression.ExpressionBuilder', function() {
-
 	beforeEach(function() {
 		this.conn = {};
 		this.expr = new ExpressionBuilder({});
 	});
-
 	describe('#andX', function() {
-		var dataForAndX = [
+		[
             [
                 ['u.user = 1'],
                 'u.user = 1'
@@ -50,9 +49,7 @@ describe('dbal.query.expression.ExpressionBuilder', function() {
                 ],
                 '(u.group_id = 1) AND ((u.user = 1) AND (u.group_id = 2))'
             ],
-        ];
-
-		dataForAndX.forEach(function(data) {
+        ].forEach(function(data) {
 			it('should yield ' + data[1], function() {
 				var composite = this.expr.andX();
 				data[0].forEach(function(part) {
@@ -67,58 +64,56 @@ describe('dbal.query.expression.ExpressionBuilder', function() {
      
     public function testOrX(parts, expected]
     {
-        composite = this.expr.orX();
-
-        foreach (parts as part) {
-            composite.add(part);
-        }
-
-        assert.equal(expected, (string) composite);
+       ;
     }
-
-    public function provideDataForOrX()
-    {
-        return [
+*/
+	describe('#orX', function() {
+    [
             [
-                ['u.user = 1'),
+                ['u.user = 1'],
                 'u.user = 1'
-            ),
+            ],
             [
-                ['u.user = 1', 'u.group_id = 1'),
+                ['u.user = 1', 'u.group_id = 1'],
                 '(u.user = 1) OR (u.group_id = 1)'
-            ),
+            ],
             [
-                ['u.user = 1'),
+                ['u.user = 1'],
                 'u.user = 1'
-            ),
+            ],
             [
-                ['u.group_id = 1', 'u.group_id = 2'),
+                ['u.group_id = 1', 'u.group_id = 2'],
                 '(u.group_id = 1) OR (u.group_id = 2)'
-            ),
+            ],
             [
                 [
                     'u.user = 1',
                     new CompositeExpression(
-                        CompositeExpression.TYPE_OR,
-                        ['u.group_id = 1', 'u.group_id = 2']
-                    ]
-                ),
+						CompositeExpression.TYPE_OR, ['u.group_id = 1', 'u.group_id = 2']
+                    )
+                ],
                 '(u.user = 1) OR ((u.group_id = 1) OR (u.group_id = 2))'
-            ),
+            ],
             [
                 [
                     'u.group_id = 1',
                     new CompositeExpression(
-                        CompositeExpression.TYPE_AND,
-                        ['u.user = 1', 'u.group_id = 2']
-                    ]
-                ),
+						CompositeExpression.TYPE_AND, ['u.user = 1', 'u.group_id = 2']
+                    )
+                ],
                 '(u.group_id = 1) OR ((u.user = 1) AND (u.group_id = 2))'
-            ),
-        );
-    }
+            ],
+        ].forEach(function(data) {
+			it('should yield ' + data[1], function() {
+				var composite = this.expr.orX();
 
-*/
+				data[0].forEach(function(part) {
+					composite.add(part);
+				});
+				assert.equal(data[1], composite.toString());
+			});
+		});
+	});
 	describe('#comparison', function() {
     [
             ['u.user_id', ExpressionBuilder.EQ, '1', 'u.user_id = 1'],

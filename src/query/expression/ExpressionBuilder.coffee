@@ -9,12 +9,12 @@ CompositeExpression= require './CompositeExpression'
 class ExpressionBuilder
 
     self = this
-    self.EQ  = '='
-    self.NEQ = '<>'
-    self.LT  = '<'
-    self.LTE = '<='
-    self.GT  = '>'
-    self.GTE = '>='
+    @EQ  = '='
+    @NEQ = '<>'
+    @LT  = '<'
+    @LTE = '<='
+    @GT  = '>'
+    @GTE = '>='
 
     ###
      * The DBAL Connection.

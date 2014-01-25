@@ -58,7 +58,7 @@ describe('dbal.query.expression.CompositeExpression', function() {
 		data.forEach(function(data) {
 			it('should yield : '+data[2], function() {
 				var expr = new CompositeExpression(data[0], data[1]);
-				assert.equal(data[2], expr.toString());
+				assert.equal(data[2], expr);
 			});
 		});
 	});
